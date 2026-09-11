@@ -1,0 +1,46 @@
+digraph AegisWorkflow {
+    // Graph styling
+    graph [fontname="Helvetica,Arial,sans-serif", fontsize=12, pad="0.5", nodesep="0.5", ranksep="0.75", bgcolor="#f4f4f9"];
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=11, shape=box, style="rounded,filled", fillcolor="#ffffff", color="#333333", penwidth=1.5];
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#666666", penwidth=1.2];
+
+    // Nodes
+    Start [shape=ellipse, fillcolor="#4CAF50", fontcolor="white", label="User Copies Text\n(Ctrl+C)"];
+    Detect [label="Daemon Detects Change\n(Hash Comparison)"];
+    PrivacyGuard [shape=diamond, fillcolor="#FFC107", label="Privacy Guard\n(Show Toast Popup)"];
+    
+    Tier1 [label="Tier 1: Fast-Path\nStrip Invisible Unicode, HTML,\n& ANSI Escape Codes", fillcolor="#BBDEFB"];
+    
+    CheckTier2 [shape=diamond, fillcolor="#FFF59D", label="Length > 50 chars\n& contains '###' or 'system:'?"];
+    
+    Tier2 [label="Tier 2: AI Shield (Gemini)\nSemantic analysis for\nPrompt Injections", fillcolor="#E1BEE7"];
+    
+    CheckModified [shape=diamond, fillcolor="#FFF59D", label="Was text modified by\nTier 1 or Tier 2?"];
+    
+    Overwrite [label="Overwrite Clipboard\nwith Sanitized Text", fillcolor="#FFCDD2"];
+    Notify [label="Show Desktop Notification\n'Threat Cleaned'", fillcolor="#FFCDD2"];
+    
+    End [shape=ellipse, fillcolor="#9E9E9E", fontcolor="white", label="Wait for Next Copy"];
+    Ignored [shape=ellipse, fillcolor="#9E9E9E", fontcolor="white", label="Drop Data / Ignore"];
+
+    // Edges
+    Start -> Detect;
+    Detect -> PrivacyGuard [label="New Text"];
+    Detect -> End [label="Same Hash"];
+    
+    PrivacyGuard -> Ignored [label="User clicks 'Ignore'"];
+    PrivacyGuard -> Tier1 [label="User clicks 'Scan'"];
+    
+    Tier1 -> CheckTier2;
+    
+    CheckTier2 -> Tier2 [label="Yes"];
+    CheckTier2 -> CheckModified [label="No"];
+    
+    Tier2 -> CheckModified;
+    
+    CheckModified -> Overwrite [label="Yes (Threat Found)"];
+    Overwrite -> Notify;
+    Notify -> End;
+    
+    CheckModified -> End [label="No (Clean Text)"];
+}

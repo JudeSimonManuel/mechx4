@@ -1,0 +1,6 @@
+pystray
+Pillow
+pyperclip
+plyer
+pydantic
+pyinstaller
