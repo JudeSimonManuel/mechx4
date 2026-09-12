@@ -1,0 +1,35 @@
+Aegis Tray - Hackathon Judge Q&A and Technical Overview
+
+=======================================================
+PART 1: How Text & Hidden Strings are Extracted
+=======================================================
+
+Q: Does Aegis scrape the DOM of the website to find hidden text?
+A: No! Aegis is a system-level clipboard guardian, not a browser extension. When a user highlights text on a webpage and presses Ctrl+C, the web browser is responsible for copying that selection to the Operating System's clipboard. If the website has hidden CSS elements (like 'opacity: 0' or 'font-size: 0') sandwiched inside the highlighted text, the browser copies those hidden elements into the OS clipboard along with the visible text. 
+
+Aegis simply monitors the OS clipboard using the 'pyperclip' library. It intercepts the payload AFTER the browser has copied it, but BEFORE the user can paste it into a vulnerable context (like a terminal or an AI prompt).
+
+Q: How does Aegis handle JavaScript clipboard hijacking?
+A: Websites can use 'event.clipboardData.setData()' in Javascript to intercept a Ctrl+C action and replace the highlighted text with a completely different payload (like an ANSI escape sequence). Again, Aegis doesn't need to know the Javascript did this. It simply detects that a new string entered the OS clipboard, intercepts it, and scans it for threats.
+
+=======================================================
+PART 2: Hackathon Judge Q&A
+=======================================================
+
+Q1: Why did you build this as a system tray application instead of a browser extension?
+A: A browser extension only protects the user while they are in that specific browser. By building Aegis as a system-level background daemon, it protects the clipboard globally. Whether the malicious payload comes from Chrome, a downloaded PDF, a Discord message, or a rogue local application, Aegis intercepts it.
+
+Q2: How do you prevent infinite loops if the user copies the same text twice, or when Aegis sanitizes and overwrites the clipboard?
+A: Aegis creates a cryptographic SHA-256 hash of the clipboard contents. It stores the hash of the last inspected payload. If the clipboard changes but the hash matches what we already sanitized or ignored, the daemon skips it. This completely eliminates infinite processing loops and reduces CPU usage to near 0%.
+
+Q3: Isn't sending clipboard data to an AI model for analysis a massive privacy risk?
+A: Yes, which is why we built the "Privacy Guard". Aegis never sends data to the cloud AI without explicit consent. Furthermore, it completely ignores short strings (under 50 characters) so that passwords and API keys are never even considered for AI analysis. For complex payloads, it spawns a native OS popup asking the user for permission before the AI ever sees it.
+
+Q4: What happens if the AI API is down or the user has no internet connection?
+A: Aegis uses a Dual-Tier architecture. Tier 1 is a hardcoded, instantaneous regex engine that runs locally and catches the most dangerous payloads (ANSI injections, invisible unicode, HTML cloaks). If Tier 2 (the AI) fails due to a network error or missing API key, the application gracefully degrades and relies purely on the highly robust Tier 1 local engine.
+
+Q5: Why did you use 'subprocess' to render the Tkinter GUI prompt?
+A: The clipboard monitor runs in a background thread to prevent locking up the system tray icon loop. However, on Linux/X11 and macOS, UI frameworks like Tkinter will crash or freeze if invoked outside the main thread. To bypass this, we use the 'subprocess' module to spawn a completely isolated, ephemeral Python process just to render the prompt and return the user's choice via exit codes. This guarantees thread-safety and cross-platform stability.
+
+Q6: What is the performance impact of polling the clipboard?
+A: Minimal. The daemon uses asyncio to poll every 0.5 seconds, and the first step is a lightweight SHA-256 hash comparison. If the hash hasn't changed, the thread immediately yields. Idle CPU usage remains under 0.1%.

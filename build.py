@@ -19,12 +19,16 @@ def build():
         print(f"Error: Could not find {main_script}")
         sys.exit(1)
         
-    # Run PyInstaller
+    # Run PyInstaller with hidden imports for dynamic libraries like plyer
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--noconsole",
         "--onefile",
         "--name", "aegis_tray",
+        "--hidden-import=plyer",
+        "--hidden-import=plyer.platforms.linux.notification",
+        "--hidden-import=plyer.platforms.win.notification",
+        "--hidden-import=plyer.platforms.macosx.notification",
         str(main_script)
     ]
     
